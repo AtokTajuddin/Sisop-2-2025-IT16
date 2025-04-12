@@ -91,7 +91,7 @@ void stop_processes(const char *user) {
                     if (uid == getuid()) {
                         printf("Stopping process %s (PID: %s)\n", entry->d_name, entry->d_name);
                         pid_t pid = atoi(entry->d_name);
-                        kill(pid, SIGKILL);  // Menghentikan proses dengan SIGKILL
+                        kill(pid, SIGKILL);  
                         log_process_status(entry->d_name, "FAILED");
                         break;
                     }
@@ -151,19 +151,18 @@ void daemon_mode(const char *user) {
     }
 
     if (pid > 0) {
-        exit(0);  // Parent process exits
+        exit(0);  
     }
 
-    // Child process becomes daemon
     if (setsid() < 0) {
         perror("Failed to create new session");
         exit(1);
     }
 
-    umask(0);  // Set file mode creation mask to 0
-    chdir("/");  // Change working directory to root
+    umask(0);  
+    chdir("/");
 
-    // Redirect standard file descriptors to /dev/null
+   
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
@@ -171,10 +170,9 @@ void daemon_mode(const char *user) {
     open("/dev/null", O_WRONLY);
     open("/dev/null", O_WRONLY);
 
-    // Loop to monitor processes
     while (1) {
-        list_processes(user);  // Memantau proses yang sedang berjalan
-        sleep(10);  // Memantau setiap 10 detik
+        list_processes(user);  
+        sleep(10); 
     }
 }
 
@@ -193,7 +191,7 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[1], "revert") == 0) {
         revert_processes(argv[2]);
     } else if (strcmp(argv[1], "fail") == 0) {
-        stop_processes(argv[2]);  // Fungsi fail adalah sama dengan menghentikan proses
+        stop_processes(argv[2]);  
     } else {
         fprintf(stderr, "Unknown command: %s\n", argv[1]);
     }
