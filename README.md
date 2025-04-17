@@ -43,3 +43,52 @@ Kondisi setelah rodok.exe di-kill, di mana proses mine-crafter sudah tidak muncu
 
 Pada kasus ini praktikan diminta bahwa salinan dari binary runme untuk diletakkan diseluruh folder /home/nama-user
 sehingga file runme tersebut berada di seluruh folder yang ada pada direktori /home/nama-user.
+
+### Soal_4 ###
+
+Pada soal ini, praktikan diminta untuk membuat file bernama debugmon.c yang dapat :
+
+- Melihat proses yang dijalankan oleh user (list)
+- Menjalankan daemon mode (daemon)
+- Menghentikan proses pemantauan daemon (stop)
+- Menggagalkan proses user yang sedang berjalan (fail)
+- Mengizinkan user menjalankan proses kembali (revert)
+- Mencatat aktivitaas dalam file .log (log)
+
+
+Untuk proses compilenya menggunakan command 
+<pre lang="markdown"> ``` gcc debugmon.c -o debugmon ``` </pre>
+
+![Compiling](/home/user/Project/sisop2/assets/4_compile.png)
+
+- Fungsi list
+
+![list](/home/user/Project/sisop2/assets/4_list.png)
+
+- Fungsi daemon
+
+![daemon](/home/user/Project/sisop2/assets/4_daemon.png)
+
+- Fungsi stop
+
+![stop](/home/user/Project/sisop2/assets/4_stop.png)
+
+- Fungsi fail
+
+![fail](/home/user/Project/sisop2/assets/4_fail.mp4)
+
+- Fungsi revert
+
+![revert](/home/user/Project/sisop2/assets/4_revert.png)
+
+- Logging activity
+
+![log](/home/user/Project/sisop2/assets/4_log.mp4)
+
+
+
+
+ 
+
+
+
