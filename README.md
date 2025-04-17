@@ -57,33 +57,45 @@ Pada soal ini, praktikan diminta untuk membuat file bernama debugmon.c yang dapa
 
 
 Untuk proses compilenya menggunakan command 
-<pre lang="markdown"> ``` gcc debugmon.c -o debugmon ``` </pre>
+<pre lang="markdown"> gcc debugmon.c -o debugmon </pre>
 
 ![Compiling](assets/4_compile.png)
 
 - Fungsi list
 
-![list](assets/4_list.png)
+![list](assets/4_list.png) 
+
+Fungsi ini akan menampilkan proses yang berjalan pada user dengan menampilkan PID, command, CPU usage, dan memory usage.
 
 - Fungsi daemon
 
 ![daemon](assets/4_daemon.png)
 
+Fungsi ini akan memantau user secara otomatis di background dan mencatatnya ke dalam file log.
+
 - Fungsi stop
 
 ![stop](assets/4_stop.png)
+
+Fungsi ini akan menghentikan proses pemantauan daemon.
 
 - Fungsi fail
 
 ![fail](assets/4_fail.png)
 
+Fungsi ini akan *kill* semua proses user, dan *log* status FAILED. Proses ini juga akan *mereset* terminal. 
+
 - Fungsi revert
 
 ![revert](assets/4_revert.png)
 
+Fungsi ini akan menjalankan proses kembali dan mencatat "log" status RUNNING
+
 - Logging activity
 
 ![log](assets/4_log.png)
+
+Fungsi ini akan mencatat proses dalam sebuah log file dalam [dd:mm:yyyy]-[hh:mm:ss]_nama-process_STATUS(RUNNING/FAILED)
 
 
 
