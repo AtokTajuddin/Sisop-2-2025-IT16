@@ -59,31 +59,31 @@ Pada soal ini, praktikan diminta untuk membuat file bernama debugmon.c yang dapa
 Untuk proses compilenya menggunakan command 
 <pre lang="markdown"> ``` gcc debugmon.c -o debugmon ``` </pre>
 
-![Compiling](/home/user/Project/sisop2/assets/4_compile.png)
+![Compiling](home/user/Project/sisop2/assets/4_compile.png)
 
 - Fungsi list
 
-![list](/home/user/Project/sisop2/assets/4_list.png)
+![list](home/user/Project/sisop2/assets/4_list.png)
 
 - Fungsi daemon
 
-![daemon](/home/user/Project/sisop2/assets/4_daemon.png)
+![daemon](home/user/Project/sisop2/assets/4_daemon.png)
 
 - Fungsi stop
 
-![stop](/home/user/Project/sisop2/assets/4_stop.png)
+![stop](home/user/Project/sisop2/assets/4_stop.png)
 
 - Fungsi fail
 
-![fail](/home/user/Project/sisop2/assets/4_fail.mp4)
+![fail](home/user/Project/sisop2/assets/4_fail.mp4)
 
 - Fungsi revert
 
-![revert](/home/user/Project/sisop2/assets/4_revert.png)
+![revert](home/user/Project/sisop2/assets/4_revert.png)
 
 - Logging activity
 
-![log](/home/user/Project/sisop2/assets/4_log.mp4)
+![log](home/user/Project/sisop2/assets/4_log.mp4)
 
 
 
