@@ -75,7 +75,7 @@ Untuk proses compilenya menggunakan command
 
 - Fungsi fail
 
-![fail](assets/4_fail.mp4)
+[🎥 fail](assets/4_fail.mp4)
 
 - Fungsi revert
 
@@ -83,7 +83,8 @@ Untuk proses compilenya menggunakan command
 
 - Logging activity
 
-![log](assets/4_log.mp4)
+[🎥 log](assets/4_log.mp4)
+
 
 
 
