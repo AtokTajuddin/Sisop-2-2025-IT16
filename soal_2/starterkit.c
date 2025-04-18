@@ -185,7 +185,7 @@ void download_and_unzip() {
     mkdir(STARTER_KIT_DIR, 0755);
 
     printf("Extracting zip...\n");
-    snprintf(cmd, sizeof(cmd), "unzip -q %s -d %s", ZIP_FILE, STARTER_KIT_DIR);
+    snprintf(cmd, sizeof(cmd), "unzip -o -q %s -d %s", ZIP_FILE, STARTER_KIT_DIR);
     if (system(cmd) != 0) {
         fprintf(stderr, "Failed to unzip file.\n");
         exit(EXIT_FAILURE);
@@ -220,14 +220,18 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[1], "--shutdown") == 0) {
         shutdown_daemon();
     } else {
-        printf("Invalid command.\n");
+        printf("Unknown option: %s\n", argv[1]);
+        printf("Usage: %s [--decrypt|--quarantine|--return|--eradicate|--shutdown]\n", argv[0]);
         return 1;
     }
 
     return 0;
 }
-    
-    
+   
+
+
+
+   
     
 
    
