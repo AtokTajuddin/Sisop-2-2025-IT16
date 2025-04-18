@@ -8,6 +8,11 @@
 
 #define MAX_PATH 1024
 
+void show_tree() {
+    printf("\nStruktur direktori saat ini:\n");
+    system("tree -L 2"); // Menampilkan struktur folder maksimal 2 level
+}
+
 void download_and_extract() {
     struct stat st = {0};
 
@@ -68,6 +73,7 @@ void filter_files() {
     }
 
     printf("File .txt berhasil difilter ke folder 'Filtered'\n");
+    show_tree();
 }
 
 int is_digit_filename(const char *filename) {
@@ -147,6 +153,7 @@ void combine_files() {
 
     fclose(combined);
     printf("Isi file berhasil digabung ke 'Combined.txt'\n");
+    show_tree();
 }
 
 char rot13_char(char c) {
@@ -174,11 +181,13 @@ void decode_file() {
     fclose(out);
 
     printf("Hasil decode ditulis ke 'Decoded.txt'\n");
+    show_tree();
 }
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
         download_and_extract();
+        show_tree();
     } else if (argc == 3 && strcmp(argv[1], "-m") == 0) {
         if (strcmp(argv[2], "Filter") == 0)
             filter_files();
@@ -198,3 +207,6 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+  
+   
