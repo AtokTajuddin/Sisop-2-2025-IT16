@@ -1,137 +1,234 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
-#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
-#include <ctype.h>
-#include <errno.h>
 #include <signal.h>
-#include <syslog.h>
 #include <time.h>
-#include <sys/inotify.h>
-#include <libgen.h>
-#include <stdbool.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
-#define ZIP_NAME "starterkit.zip"
-#define ZIP_URL "https://drive.google.com/uc?id=1_5GxIGfQr3mNKuavJbte_AoRkEQLXSKS&export=download"
-#define QUARANTINE_DIR "karantina"
-#define BUF_LEN 4096
+#define ZIP_URL "https://drive.google.com/uc?export=download&id=1_5GxIGfQr3mNKuavJbte_AoRkEQLXSKS"
+#define ZIP_FILE "starterkit.zip"
+#define STARTER_KIT_DIR "starter_kit"
+#define QUARANTINE_DIR "quarantine"
+#define LOG_FILE "activity.log"
+#define PID_FILE "daemon.pid"
+#define MAX_PATH 1024
 
-void download_and_extract() {
-    printf("Mengunduh starterkit...\n");
-    char command[512];
-    snprintf(command, sizeof(command), "wget -q --show-progress \"%s\" -O %s", ZIP_URL, ZIP_NAME);
-    system(command);
+void log_activity(const char *operation, const char *filename, int pid) {
+    FILE *log = fopen(LOG_FILE, "a");
+    if (!log) return;
 
-    printf("Mengekstrak starterkit...\n");
-    snprintf(command, sizeof(command), "unzip -q %s", ZIP_NAME);
-    system(command);
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    char timestamp[30];
+    strftime(timestamp, sizeof(timestamp), "[%d-%m-%Y][%H:%M:%S]", t);
 
-    printf("Menghapus file ZIP...\n");
-    remove(ZIP_NAME);
+    if (strcmp(operation, "Decrypt") == 0) {
+        fprintf(log, "%s - Successfully started decryption process with PID %d\n", timestamp, pid);
+    } else if (strcmp(operation, "Quarantine") == 0) {
+        fprintf(log, "%s - %s - Successfully moved to quarantine directory\n", timestamp, filename);
+    } else if (strcmp(operation, "Return") == 0) {
+        fprintf(log, "%s - %s - Successfully returned to starter kit directory\n", timestamp, filename);
+    } else if (strcmp(operation, "Eradicate") == 0) {
+        fprintf(log, "%s - %s - Successfully deleted\n", timestamp, filename);
+    } else if (strcmp(operation, "Shutdown") == 0) {
+        fprintf(log, "%s - Successfully shut off decryption process with PID %d\n", timestamp, pid);
+    }
+
+    fclose(log);
 }
 
-char *base64_decode(const char *encoded) {
-    FILE *fp_in = tmpfile();
-    FILE *fp_out = tmpfile();
-    if (!fp_in || !fp_out) return NULL;
+char* base64_decode(const char *input) {
+    BIO *bio, *b64;
+    int len = strlen(input);
+    char *buffer = (char *)malloc(len + 1);
+    if (!buffer) return NULL;
 
-    fwrite(encoded, 1, strlen(encoded), fp_in);
-    rewind(fp_in);
+    b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+    bio = BIO_new_mem_buf((void*)input, len);
+    bio = BIO_push(b64, bio);
 
-    char command[256];
-    snprintf(command, sizeof(command), "base64 -d");
-    FILE *pipe = popen(command, "w");
-    if (!pipe) return NULL;
+    int decoded_len = BIO_read(bio, buffer, len);
+    if (decoded_len < 0) decoded_len = 0;
+    buffer[decoded_len] = '\0';
 
-    fwrite(encoded, 1, strlen(encoded), pipe);
-    pclose(pipe);
-
-    char *decoded = malloc(256);
-    fread(decoded, 1, 255, fp_out);
-    decoded[255] = '\0';
-
-    fclose(fp_in);
-    fclose(fp_out);
-    return decoded;
+    BIO_free_all(bio);
+    return buffer;
 }
 
-void daemonize() {
+void start_decrypt_daemon() {
     pid_t pid = fork();
     if (pid < 0) exit(EXIT_FAILURE);
     if (pid > 0) exit(EXIT_SUCCESS);
 
     umask(0);
     setsid();
-    chdir("/");
 
-    for (int x = sysconf(_SC_OPEN_MAX); x >= 0; x--) close(x);
+    FILE *pf = fopen(PID_FILE, "w");
+    if (pf) {
+        fprintf(pf, "%d", getpid());
+        fclose(pf);
+    }
 
-    openlog("starterkit-daemon", LOG_PID, LOG_DAEMON);
+    log_activity("Decrypt", NULL, getpid());
+
+    while (1) {
+        DIR *dir = opendir(QUARANTINE_DIR);
+        struct dirent *entry;
+
+        if (!dir) {
+            perror("Failed to open quarantine directory");
+            sleep(1);
+            continue;
+        }
+
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_type == DT_REG) {
+                char *decoded = base64_decode(entry->d_name);
+                if (!decoded || strlen(decoded) == 0) {
+                    free(decoded);
+                    continue;
+                }
+
+                char old_path[MAX_PATH], new_path[MAX_PATH];
+                snprintf(old_path, sizeof(old_path), "%s/%s", QUARANTINE_DIR, entry->d_name);
+                snprintf(new_path, sizeof(new_path), "%s/%s", QUARANTINE_DIR, decoded);
+
+                if (rename(old_path, new_path) == 0) {
+                    // Rename success
+                }
+                free(decoded);
+            }
+        }
+        closedir(dir);
+        sleep(1);
+    }
 }
 
-void decrypt_names_daemon() {
-    daemonize();
-
-    mkdir(QUARANTINE_DIR, 0755);
-
-    int fd = inotify_init();
-    if (fd < 0) {
-        syslog(LOG_ERR, "Gagal inisialisasi inotify");
-        exit(EXIT_FAILURE);
+void move_files(const char *src_dir, const char *dest_dir, const char *operation) {
+    DIR *dir = opendir(src_dir);
+    if (!dir) {
+        perror("Failed to open source directory");
+        return;
     }
 
-    int wd = inotify_add_watch(fd, QUARANTINE_DIR, IN_CREATE | IN_MOVED_TO);
-    if (wd == -1) {
-        syslog(LOG_ERR, "Gagal menambahkan watch di %s", QUARANTINE_DIR);
-        exit(EXIT_FAILURE);
-    }
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            char src_path[MAX_PATH], dest_path[MAX_PATH];
+            snprintf(src_path, sizeof(src_path), "%s/%s", src_dir, entry->d_name);
+            snprintf(dest_path, sizeof(dest_path), "%s/%s", dest_dir, entry->d_name);
 
-    syslog(LOG_INFO, "Daemon karantina berjalan...");
-
-    char buf[BUF_LEN] __attribute__((aligned(8)));
-    while (1) {
-        int length = read(fd, buf, BUF_LEN);
-        if (length < 0) break;
-
-        int i = 0;
-        while (i < length) {
-            struct inotify_event *event = (struct inotify_event *)&buf[i];
-            if (event->len && (event->mask & (IN_CREATE | IN_MOVED_TO))) {
-                char path[512];
-                snprintf(path, sizeof(path), "%s/%s", QUARANTINE_DIR, event->name);
-
-                char *decoded_name = base64_decode(event->name);
-                if (decoded_name) {
-                    char new_path[512];
-                    snprintf(new_path, sizeof(new_path), "%s/%s", QUARANTINE_DIR, decoded_name);
-                    rename(path, new_path);
-                    syslog(LOG_INFO, "Renamed: %s -> %s", event->name, decoded_name);
-                    free(decoded_name);
-                }
+            if (rename(src_path, dest_path) == 0) {
+                log_activity(operation, entry->d_name, 0);
             }
-            i += sizeof(struct inotify_event) + event->len;
         }
     }
+    closedir(dir);
+}
 
-    inotify_rm_watch(fd, wd);
-    close(fd);
-    closelog();
+void eradicate_files() {
+    DIR *dir = opendir(QUARANTINE_DIR);
+    if (!dir) {
+        perror("Failed to open quarantine directory");
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            char path[MAX_PATH];
+            snprintf(path, sizeof(path), "%s/%s", QUARANTINE_DIR, entry->d_name);
+
+            if (remove(path) == 0) {
+                log_activity("Eradicate", entry->d_name, 0);
+            }
+        }
+    }
+    closedir(dir);
+}
+
+void shutdown_daemon() {
+    FILE *pf = fopen(PID_FILE, "r");
+    if (!pf) {
+        perror("Failed to read PID file");
+        return;
+    }
+
+    int pid;
+    fscanf(pf, "%d", &pid);
+    fclose(pf);
+
+    if (kill(pid, SIGTERM) == 0) {
+        remove(PID_FILE);
+        log_activity("Shutdown", NULL, pid);
+    } else {
+        perror("Failed to terminate daemon");
+    }
+}
+
+void download_and_unzip() {
+    printf("Downloading zip file...\n");
+    char cmd[2048];
+
+    snprintf(cmd, sizeof(cmd), "wget -q --show-progress -O %s \"%s\"", ZIP_FILE, ZIP_URL);
+    if (system(cmd) != 0) {
+        fprintf(stderr, "Failed to download file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    mkdir(STARTER_KIT_DIR, 0755);
+
+    printf("Extracting zip...\n");
+    snprintf(cmd, sizeof(cmd), "unzip -q %s -d %s", ZIP_FILE, STARTER_KIT_DIR);
+    if (system(cmd) != 0) {
+        fprintf(stderr, "Failed to unzip file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    remove(ZIP_FILE);
+    printf("Starter kit downloaded and extracted to %s.\n", STARTER_KIT_DIR);
 }
 
 int main(int argc, char *argv[]) {
+    mkdir(STARTER_KIT_DIR, 0755);
+    mkdir(QUARANTINE_DIR, 0755);
+
     if (argc == 1) {
-        download_and_extract();
-    } else if (argc == 2 && strcmp(argv[1], "--decrypt") == 0) {
-        decrypt_names_daemon();
-    } else {
-        printf("Penggunaan:\n");
-        printf("  ./starterkit           # Download & extract starter kit\n");
-        printf("  ./starterkit --decrypt # Jalankan daemon karantina\n");
+        download_and_unzip();
+        return 0;
     }
+
+    if (argc != 2) {
+        printf("Usage: %s [--decrypt|--quarantine|--return|--eradicate|--shutdown]\n", argv[0]);
+        return 1;
+    }
+
+    if (strcmp(argv[1], "--decrypt") == 0) {
+        start_decrypt_daemon();
+    } else if (strcmp(argv[1], "--quarantine") == 0) {
+        move_files(STARTER_KIT_DIR, QUARANTINE_DIR, "Quarantine");
+    } else if (strcmp(argv[1], "--return") == 0) {
+        move_files(QUARANTINE_DIR, STARTER_KIT_DIR, "Return");
+    } else if (strcmp(argv[1], "--eradicate") == 0) {
+        eradicate_files();
+    } else if (strcmp(argv[1], "--shutdown") == 0) {
+        shutdown_daemon();
+    } else {
+        printf("Invalid command.\n");
+        return 1;
+    }
+
     return 0;
 }
+    
+    
+    
+
+   
+
